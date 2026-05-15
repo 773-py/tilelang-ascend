@@ -446,7 +446,11 @@ const std::unordered_map<std::string, DataType> CopyInfoCollector::type_map_ = {
 
 class AscendWorkspaceReductionPass : public arith::IRMutatorWithAnalyzer {
 public:
-  static PrimFunc Substitute(PrimFunc f) {
+  static PrimFunc Substitute(PrimFunc f, std::string platform) {
+    if (platform == "A5") {
+      return f;
+    }
+
     arith::Analyzer analyzer;
 
     // Read buffers_skip_vid_reduction from PrimFunc attrs
@@ -526,7 +530,8 @@ private:
       "copy_ub_to_l1",  "copy_l0c_to_ub", "copy_ub_to_ub"};
 
   std::unordered_map<std::string, std::string> copy_replace_table_ = {
-      {"copy_ub_to_l1", "copy_ub_to_gm"}, {"copy_l0c_to_ub", "copy_l0c_to_gm"}};
+      {"copy_ub_to_l1", "copy_ub_to_gm"},
+      {"copy_l0c_to_ub", "copy_l0c_to_gm"}};
 
   std::string PrintDstScope(const DstBufferScope &dst_scope) {
     switch (dst_scope) {
@@ -883,9 +888,9 @@ namespace transform {
 
 using namespace tir::transform;
 
-tvm::transform::Pass AscendWorkspaceReduction() {
+tvm::transform::Pass AscendWorkspaceReduction(std::string platform) {
   auto pass_func = [=](PrimFunc f, IRModule m, PassContext ctx) {
-    return AscendWorkspaceReductionPass::Substitute(std::move(f));
+    return AscendWorkspaceReductionPass::Substitute(std::move(f), platform);
   };
   return CreatePrimFuncPass(pass_func, 0, "tl.AscendWorkspaceReduction", {});
 }

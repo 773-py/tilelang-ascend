@@ -1164,6 +1164,65 @@ void CodeGenTileLangAscendPto::CopyUBToUBCodegen(const CallNode *call) {
   this->stream << ");\n";
 }
 
+void CodeGenTileLangAscendPto::CopyUBToL1Codegen(const CallNode *call) {
+  ICHECK(this->platform_ == "A5")
+      << "copy_ub_to_l1 is a direct A5 PTO CV copy. Non-A5 targets should "
+         "use AscendWorkspaceReduction to lower it through GM.";
+
+  BufferInfo src_info = GetBufferInfo(call->args[1]);
+  BufferInfo dst_info = GetBufferInfo(call->args[2]);
+
+  ShapeInfo src_shape_info = GetSliceInfo(src_info.access_ptr);
+  ShapeInfo dst_shape_info = GetSliceInfo(dst_info.access_ptr);
+
+  std::string src_name = src_shape_info.ub_name;
+  std::string dst_name = dst_shape_info.ub_name;
+
+  if (src_shape_info.is_slice) {
+    src_name = GetTempVarName(src_shape_info.ub_name);
+    CreateUbVariableND(src_name, src_shape_info);
+  }
+
+  if (dst_shape_info.is_slice) {
+    dst_name = GetTempVarName(dst_shape_info.ub_name);
+    CreateCubeVariable(dst_name, dst_shape_info,
+                       kAscendPtoScope + "TileMatL1");
+  }
+
+  this->PrintIndent();
+  this->stream << kAscendPtoScope << "copy_ub_to_l1(" << dst_name << ", "
+               << src_name << ");\n";
+}
+
+void CodeGenTileLangAscendPto::CopyL0CToUBCodegen(const CallNode *call) {
+  ICHECK(this->platform_ == "A5")
+      << "copy_l0c_to_ub is a direct A5 PTO CV copy. Non-A5 targets should "
+         "use AscendWorkspaceReduction to lower it through GM.";
+
+  BufferInfo src_info = GetBufferInfo(call->args[1]);
+  BufferInfo dst_info = GetBufferInfo(call->args[2]);
+
+  ShapeInfo src_shape_info = GetSliceInfo(src_info.access_ptr);
+  ShapeInfo dst_shape_info = GetSliceInfo(dst_info.access_ptr);
+
+  std::string src_name = src_shape_info.ub_name;
+  std::string dst_name = dst_shape_info.ub_name;
+
+  if (src_shape_info.is_slice) {
+    src_name = GetTempVarName(src_shape_info.ub_name);
+    CreateCubeVariable(src_name, src_shape_info, "TileAcc");
+  }
+
+  if (dst_shape_info.is_slice) {
+    dst_name = GetTempVarName(dst_shape_info.ub_name);
+    CreateUbVariableND(dst_name, dst_shape_info);
+  }
+
+  this->PrintIndent();
+  this->stream << kAscendPtoScope << "copy_l0c_to_ub(" << dst_name << ", "
+               << src_name << ");\n";
+}
+
 void CodeGenTileLangAscendPto::CopyL1ToL0Codegen(const CallNode *call,
                                                  bool is_a) {
   BufferInfo src_info = GetBufferInfo(call->args[1]);
@@ -1291,6 +1350,11 @@ void CodeGenTileLangAscendPto::CallExternCodegen(const CallNode *op) {
     GMCopyCall(op, "copy_gm_to_l1");
   } else if (op_name.find("tl::ascend::copy_l0c_to_gm") != std::string::npos) {
     GMCopyCall(op, "copy_l0c_to_gm");
+  } else if (op_name.find("tl::ascend::copy_ub_to_l1") != std::string::npos) {
+    CopyUBToL1Codegen(op);
+  } else if (op_name.find("tl::ascend::copy_l0c_to_ub") !=
+             std::string::npos) {
+    CopyL0CToUBCodegen(op);
   } else if (op_name.find("tl::ascend::copy_ub_to_ub") != std::string::npos) {
     CopyUBToUBCodegen(op);
   } else if (op_name.find("tl::ascend::copy_l1_to_l0a") != std::string::npos) {
@@ -2680,6 +2744,15 @@ void CodeGenTileLangAscendPto::VisitStmt_(const AttrStmtNode *op) {
         current_block_id = current_block_id + "_";
       }
       this->stream << "auto " << current_block_id << " = get_block_idx();\n";
+      if (this->platform_ == "A5") {
+        this->PrintIndent();
+        this->stream << "#if defined(__DAV_C310_VEC__)\n";
+        this->PrintIndent();
+        this->stream << current_block_id << " = " << current_block_id
+                     << " / 2;\n";
+        this->PrintIndent();
+        this->stream << "#endif\n";
+      }
       this->PrintIndent();
       stream << "set_ffts_base_addr(ffts_Addr);\n\n";
 

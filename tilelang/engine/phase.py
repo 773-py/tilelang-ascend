@@ -46,7 +46,9 @@ def allow_vectorize(pass_ctx: PassContext | None = None) -> bool:
     return not disable_vectorize
 
 
-def LowerAndLegalize(mod: IRModule, target: Target) -> IRModule:
+def LowerAndLegalize(
+    mod: IRModule, target: Target, platform: str = "auto"
+) -> IRModule:
     # allocate the tmp buffer for vector api
     mod = tilelang.transform.InjectTmpBuffer(target)(mod)
     mod = tilelang.transform.AscendInferBufferScope()(mod)
@@ -69,7 +71,7 @@ def LowerAndLegalize(mod: IRModule, target: Target) -> IRModule:
     # Lower high-level tile operations to low-level operations
     mod = tilelang.transform.LowerTileOp()(mod)
     # Erase manual workspace allocations for virtual CV copy in Ascend
-    mod = tilelang.transform.AscendWorkspaceReduction()(mod)
+    mod = tilelang.transform.AscendWorkspaceReduction(platform)(mod)
     # Legalize vectorized loops to ensure they are valid
     mod = tilelang.transform.LegalizeVectorizedLoop()(mod)
     # Add safety checks for memory accesses

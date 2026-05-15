@@ -100,6 +100,30 @@ AICORE PTO_INLINE void copy_l1_to_l0b(
   pto::TEXTRACT(l0b, B, indexRow, indexCol);
 }
 
+template <typename T1, typename T2, int M, int N, int RowValid = M,
+          int ColValid = N, pto::PadValue PadVal = pto::PadValue::Null>
+AICORE PTO_INLINE void
+copy_ub_to_l1(TileMatL1<T2, M, N, RowValid, ColValid> &dst,
+              TileUbDataND<T1, M, N, RowValid, ColValid, PadVal> &src) {
+  if constexpr (std::is_same_v<T1, T2>) {
+    pto::TMOV(dst, src);
+  } else {
+    pto::TCVT(dst, src, pto::RoundMode::CAST_NONE);
+  }
+}
+
+template <typename T1, typename T2, int M, int N, int RowValid = M,
+          int ColValid = N>
+AICORE PTO_INLINE void
+copy_l0c_to_ub(TileUbDataND<T2, M, N, RowValid, ColValid> &dst,
+               pto::TileAcc<T1, M, N, RowValid, ColValid> &src) {
+  if constexpr (std::is_same_v<T1, T2>) {
+    pto::TMOV(dst, src);
+  } else {
+    pto::TCVT(dst, src, pto::RoundMode::CAST_NONE);
+  }
+}
+
 template <typename T1, typename T2, int M, int N, int K, int validM = M,
           int validN = N>
 AICORE PTO_INLINE void mma(TileMatL0A<T1, M, K> l0a, TileMatL0B<T1, K, N> l0b,

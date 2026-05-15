@@ -19,6 +19,7 @@ from tilelang.engine.phase import (
     LowerAndLegalize,
     OptimizeForTarget,
 )
+from tilelang.utils.target import determine_platform
 
 
 def match_global_kernel(source: str, annotation: str = "__global__") -> int:
@@ -68,6 +69,7 @@ def get_annotated_mod(
     target: Union[str, Target] = "auto",
     target_host: Optional[Union[str, Target]] = None,
     model_type: Literal["device", "host", "all"] = "all",
+    platform: str = "auto",
 ) -> Union[IRModule, tuple[IRModule, IRModule]]:
 
     # Validate model_type early
@@ -84,13 +86,14 @@ def get_annotated_mod(
         target = determine_target(target)
     target_host = tvm.target.Target.canon_target(canon_target_host(target, target_host))
     target = tvm.target.Target(target, target_host)
+    platform = determine_platform(platform)
 
     _is_host_call = get_host_call(is_device_c=is_cpu_device_backend(target))
     _is_device_call = get_device_call(is_device_c=is_cpu_device_backend(target))
 
     # Apply transformations
-    mod = LowerAndLegalize(mod, target)
-    mod = OptimizeForTarget(mod, target)
+    mod = LowerAndLegalize(mod, target, platform)
+    mod = OptimizeForTarget(mod, target, platform)
 
     # Define dispatch dictionary for different model types
     dispatch = {

@@ -1112,6 +1112,9 @@ void CodeGenTileLangAscend::AddFunction(const GlobalVar &gvar,
   if (cv_ratio_opt.defined()) {
     cv_ratio_ = cv_ratio_opt.value().as<StringImmNode>()->value;
   }
+  if (platform_ == "A5") {
+    cv_ratio_ = cv_1_2;
+  }
 
   this->PrintFuncPrefix(stream);
   CodeGenC::PrintType(f->ret_type, stream);

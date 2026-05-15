@@ -426,7 +426,7 @@ def AscendVidReduction():
     return _ffi_api.AscendVidReduction()  # type: ignore
 
 
-def AscendWorkspaceReduction():
+def AscendWorkspaceReduction(platform: str = "auto"):
     """Reduction Workspace for Ascend.
 
     Returns
@@ -435,7 +435,7 @@ def AscendWorkspaceReduction():
         The result pass
     ----
     """
-    return _ffi_api.AscendWorkspaceReduction()  # type: ignore
+    return _ffi_api.AscendWorkspaceReduction(platform)  # type: ignore
 
 
 def AscendInferBufferScope():

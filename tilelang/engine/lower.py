@@ -220,7 +220,7 @@ def lower(
     target = tvm.target.Target({"kind": "llvm", "model": target})
 
     # Phase 1: Lower and legalize the IR
-    mod = LowerAndLegalize(mod, target)
+    mod = LowerAndLegalize(mod, target, platform)
 
     # Phase 2: Optimize the IR for the target
     mod = OptimizeForTarget(mod, target, platform)
